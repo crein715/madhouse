@@ -88,12 +88,13 @@
             });
 
             if (isWatched(element.id)) {
-                card.render(true).css({ opacity: 0.4 });
+                card.render(true).style.opacity = '0.4';
 
                 var badge = document.createElement('div');
                 badge.classList.add('madhouse-watched-badge');
                 badge.innerHTML = eye_icon;
-                card.render(true).find('.card__view').append(badge);
+                var view = card.render(true).querySelector('.card__view');
+                if (view) view.appendChild(badge);
             }
 
             return card;
