@@ -2,181 +2,22 @@
     'use strict';
 
     var PLUGIN_NAME = 'madhouse_anime';
-    var MADHOUSE_ID = 3464;
-    var ANIMATION_GENRE = 16;
 
     var mad_icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>';
-
-    function MadhouseComponent(object) {
-        var network = new Lampa.Reguest();
-        var scroll = new Lampa.Scroll({ mask: true, over: true });
-        var items = [];
-        var html = document.createElement('div');
-        var content = document.createElement('div');
-        var total_pages = 0;
-        var current_page = 0;
-        var loading_data = false;
-        var last_element = null;
-        var comp = this;
-
-        this.activity = null;
-
-        this.create = function () {
-            if (!comp.activity) {
-                try {
-                    var a = Lampa.Activity.active();
-                    if (a && a.activity) comp.activity = a.activity;
-                } catch (e) {}
-            }
-
-            if (comp.activity) comp.activity.loader(true);
-
-            html.classList.add('layer--wheight');
-            content.classList.add('category-full', 'items', 'items--cards');
-
-            scroll.append(content);
-
-            scroll.onWheel = function (step) {
-                if (!Lampa.Controller.own(comp)) comp.start();
-                if (step > 0) Navigator.move('down');
-                else Navigator.move('up');
-            };
-
-            var scrollRendered = scroll.render();
-            html.appendChild(scrollRendered instanceof jQuery ? scrollRendered[0] : scrollRendered);
-
-            comp.loadPage(1);
-        };
-
-        this.loadPage = function (page) {
-            if (loading_data) return;
-            loading_data = true;
-
-            var url = Lampa.TMDB.api('discover/tv?with_companies=' + MADHOUSE_ID + '&with_genres=' + ANIMATION_GENRE + '&sort_by=vote_average.desc&vote_count.gte=10&page=' + page);
-
-            network.silent(url, function (data) {
-                if (data && data.results && data.results.length) {
-                    total_pages = data.total_pages || 0;
-                    current_page = page;
-
-                    data.results.forEach(function (element) {
-                        element.media_type = element.media_type || 'tv';
-                    });
-
-                    comp.append(data.results);
-                }
-
-                loading_data = false;
-                if (comp.activity) comp.activity.loader(false);
-            }, function () {
-                loading_data = false;
-                if (comp.activity) comp.activity.loader(false);
-            });
-        };
-
-        this.next = function () {
-            if (current_page < total_pages && !loading_data) {
-                comp.loadPage(current_page + 1);
-            }
-        };
-
-        this.append = function (results) {
-            var fragment = document.createDocumentFragment();
-
-            results.forEach(function (element) {
-                var card = Lampa.Maker.make('Card', element);
-                card.create();
-
-                var render = card.render();
-                render.addClass('selector');
-
-                render.on('hover:focus', function () {
-                    last_element = render[0];
-                    scroll.update(render[0], true);
-
-                    if (element.backdrop_path) {
-                        Lampa.Background.change(Lampa.TMDB.image('t/p/w1280' + element.backdrop_path));
-                    }
-                });
-
-                render.on('hover:enter', function () {
-                    var method = element.media_type === 'movie' ? 'movie' : 'tv';
-                    Lampa.Activity.push({
-                        url: method + '/' + element.id,
-                        component: 'full',
-                        id: element.id,
-                        method: method,
-                        card: element,
-                        source: 'tmdb'
-                    });
-                });
-
-                fragment.appendChild(render[0]);
-                items.push(card);
-
-                if (!last_element) last_element = render[0];
-            });
-
-            content.appendChild(fragment);
-
-            if (current_page === 1) {
-                Lampa.Layer.update(html);
-                if (comp.activity) comp.activity.toggle();
-                comp.start();
-            }
-        };
-
-        this.start = function () {
-            Lampa.Controller.add('content', {
-                link: comp,
-                toggle: function () {
-                    Lampa.Controller.collectionSet(scroll.render());
-                    Lampa.Controller.collectionFocus(last_element || false, scroll.render());
-                },
-                left: function () {
-                    if (Navigator.canmove('left')) Navigator.move('left');
-                    else Lampa.Controller.toggle('menu');
-                },
-                right: function () {
-                    if (Navigator.canmove('right')) Navigator.move('right');
-                },
-                up: function () {
-                    if (Navigator.canmove('up')) Navigator.move('up');
-                    else Lampa.Controller.toggle('head');
-                },
-                down: function () {
-                    if (Navigator.canmove('down')) Navigator.move('down');
-                    else comp.next();
-                },
-                back: function () {
-                    Lampa.Activity.backward();
-                }
-            });
-            Lampa.Controller.toggle('content');
-        };
-
-        this.pause = function () {};
-        this.stop = function () {};
-
-        this.render = function () {
-            return html;
-        };
-
-        this.destroy = function () {
-            network.clear();
-            scroll.destroy();
-            html.remove();
-            items = [];
-        };
-    }
 
     function addMenuItem() {
         var button = Lampa.Menu.addButton(mad_icon, 'Madhouse', function () {
             Lampa.Activity.push({
-                url: '',
+                url: 'discover/tv',
                 title: 'Madhouse Anime',
-                component: PLUGIN_NAME,
-                page: 1
+                component: 'category_full',
+                source: 'tmdb',
+                page: 1,
+                card_type: true,
+                with_companies: 3464,
+                with_genres: 16,
+                sort_by: 'vote_average.desc',
+                'vote_count.gte': 10
             });
         });
         button.addClass('madhouse-menu-item');
@@ -185,9 +26,7 @@
     function init() {
         Lampa.Template.add('madhouse_style', '<style>.madhouse-menu-item .menu__ico svg{width:2.2em;height:2.2em;fill:currentColor}</style>');
         $('body').append(Lampa.Template.get('madhouse_style'));
-
         addMenuItem();
-        Lampa.Component.add(PLUGIN_NAME, MadhouseComponent);
     }
 
     if (!window.plugin_madhouse_ready) {
