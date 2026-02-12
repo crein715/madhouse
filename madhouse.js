@@ -62,6 +62,10 @@
         var listener = Lampa.Listener;
 
         var allResults = [];
+        var gridUnwatched = null;
+        var gridWatched = null;
+        var headerUnwatched = null;
+        var headerWatched = null;
 
         body.classList.add('category-full');
 
@@ -134,42 +138,59 @@
             });
         }
 
-        function renderCards(results) {
-            var split = splitResults(results);
+        function ensureSections() {
+            if (!headerUnwatched) {
+                headerUnwatched = createSectionHeader('Unwatched');
+                body.appendChild(headerUnwatched);
+            }
+            if (!gridUnwatched) {
+                gridUnwatched = document.createElement('div');
+                gridUnwatched.className = 'madhouse-grid';
+                body.appendChild(gridUnwatched);
+            }
+            if (!headerWatched) {
+                headerWatched = createSectionHeader('Watched');
+                body.appendChild(headerWatched);
+            }
+            if (!gridWatched) {
+                gridWatched = document.createElement('div');
+                gridWatched.className = 'madhouse-grid';
+                body.appendChild(gridWatched);
+            }
+        }
 
-            body.innerHTML = '';
+        function fullRebuild(results) {
             items.forEach(function (c) { c.destroy(); });
             items = [];
 
-            if (split.unwatched.length) {
-                body.appendChild(createSectionHeader('Unwatched'));
+            if (gridUnwatched) gridUnwatched.innerHTML = '';
+            if (gridWatched) gridWatched.innerHTML = '';
 
-                var gridUnwatched = document.createElement('div');
-                gridUnwatched.className = 'madhouse-grid';
+            ensureSections();
 
-                split.unwatched.forEach(function (element) {
-                    var card = createCard(element);
-                    gridUnwatched.appendChild(card.render(true));
-                    items.push(card);
-                });
-
-                body.appendChild(gridUnwatched);
-            }
-
-            if (split.watched.length) {
-                body.appendChild(createSectionHeader('Watched'));
-
-                var gridWatched = document.createElement('div');
-                gridWatched.className = 'madhouse-grid';
-
-                split.watched.forEach(function (element) {
-                    var card = createCard(element);
+            results.forEach(function (element) {
+                var card = createCard(element);
+                if (isWatched(element.id)) {
                     gridWatched.appendChild(card.render(true));
-                    items.push(card);
-                });
+                } else {
+                    gridUnwatched.appendChild(card.render(true));
+                }
+                items.push(card);
+            });
+        }
 
-                body.appendChild(gridWatched);
-            }
+        function appendNewResults(newResults) {
+            ensureSections();
+
+            newResults.forEach(function (element) {
+                var card = createCard(element);
+                if (isWatched(element.id)) {
+                    gridWatched.appendChild(card.render(true));
+                } else {
+                    gridUnwatched.appendChild(card.render(true));
+                }
+                items.push(card);
+            });
         }
 
         function loadData() {
@@ -183,8 +204,9 @@
 
                 total_pages = data.total_pages || 1;
 
-                allResults = allResults.concat(data.results || []);
-                renderCards(allResults);
+                var newResults = data.results || [];
+                allResults = allResults.concat(newResults);
+                fullRebuild(allResults);
 
                 activity.toggle();
                 Lampa.Layer.visible(scroll.render(true));
@@ -206,8 +228,9 @@
                 loading = false;
                 total_pages = data.total_pages || 1;
 
-                allResults = allResults.concat(data.results || []);
-                renderCards(allResults);
+                var newResults = data.results || [];
+                allResults = allResults.concat(newResults);
+                appendNewResults(newResults);
 
                 Lampa.Layer.visible(scroll.render(true));
                 Lampa.Controller.collectionSet(scroll.render(true));
