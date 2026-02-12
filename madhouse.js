@@ -29,7 +29,7 @@
         return idx === -1;
     }
 
-    function sortResults(results) {
+    function splitResults(results) {
         var unwatched = [];
         var watched = [];
         results.forEach(function (item) {
@@ -39,7 +39,14 @@
                 unwatched.push(item);
             }
         });
-        return unwatched.concat(watched);
+        return { unwatched: unwatched, watched: watched };
+    }
+
+    function createSectionHeader(text) {
+        var header = document.createElement('div');
+        header.className = 'madhouse-section-header';
+        header.textContent = text;
+        return header;
     }
 
     function MadhouseComponent(object) {
@@ -54,9 +61,9 @@
         var activity = null;
         var listener = Lampa.Listener;
 
+        var allResults = [];
+
         body.classList.add('category-full');
-        body.classList.add('mapping--grid');
-        body.classList.add('cols--6');
 
         scroll.minus();
         scroll.append(body);
@@ -128,16 +135,41 @@
         }
 
         function renderCards(results) {
-            var sorted = sortResults(results);
-            var fragment = document.createDocumentFragment();
+            var split = splitResults(results);
 
-            sorted.forEach(function (element) {
-                var card = createCard(element);
-                fragment.appendChild(card.render(true));
-                items.push(card);
-            });
+            body.innerHTML = '';
+            items.forEach(function (c) { c.destroy(); });
+            items = [];
 
-            body.appendChild(fragment);
+            if (split.unwatched.length) {
+                body.appendChild(createSectionHeader('Unwatched'));
+
+                var gridUnwatched = document.createElement('div');
+                gridUnwatched.className = 'madhouse-grid';
+
+                split.unwatched.forEach(function (element) {
+                    var card = createCard(element);
+                    gridUnwatched.appendChild(card.render(true));
+                    items.push(card);
+                });
+
+                body.appendChild(gridUnwatched);
+            }
+
+            if (split.watched.length) {
+                body.appendChild(createSectionHeader('Watched'));
+
+                var gridWatched = document.createElement('div');
+                gridWatched.className = 'madhouse-grid';
+
+                split.watched.forEach(function (element) {
+                    var card = createCard(element);
+                    gridWatched.appendChild(card.render(true));
+                    items.push(card);
+                });
+
+                body.appendChild(gridWatched);
+            }
         }
 
         function loadData() {
@@ -151,7 +183,8 @@
 
                 total_pages = data.total_pages || 1;
 
-                renderCards(data.results || []);
+                allResults = allResults.concat(data.results || []);
+                renderCards(allResults);
 
                 activity.toggle();
                 Lampa.Layer.visible(scroll.render(true));
@@ -173,7 +206,8 @@
                 loading = false;
                 total_pages = data.total_pages || 1;
 
-                renderCards(data.results || []);
+                allResults = allResults.concat(data.results || []);
+                renderCards(allResults);
 
                 Lampa.Layer.visible(scroll.render(true));
                 Lampa.Controller.collectionSet(scroll.render(true));
@@ -283,6 +317,9 @@
             '.madhouse-menu-item .menu__ico svg{width:2.2em;height:2.2em;fill:currentColor}' +
             '.madhouse-watched-badge{position:absolute;top:0.5em;right:0.5em;background:rgba(0,0,0,0.7);border-radius:50%;padding:0.3em;display:flex;align-items:center;justify-content:center;z-index:2}' +
             '.madhouse-watched-badge svg{fill:#4CAF50}' +
+            '.madhouse-section-header{width:100%;padding:1em 0.5em 0.5em;font-size:1.3em;font-weight:600;color:rgba(255,255,255,0.9);border-bottom:2px solid rgba(255,255,255,0.15);margin-bottom:0.8em;clear:both}' +
+            '.madhouse-grid{display:flex;flex-wrap:wrap;gap:0;width:100%}' +
+            '.madhouse-grid .card{width:calc(100% / 6);flex-shrink:0}' +
         '</style>');
         $('body').append(Lampa.Template.get('madhouse_style'));
 
