@@ -17,12 +17,19 @@
         var current_page = 0;
         var loading_data = false;
         var last = false;
-        var activity;
+        var comp = this;
+
+        this.activity = null;
 
         this.create = function () {
-            var comp = this;
-            activity = Lampa.Activity.active();
-            activity.activity.loader(true);
+            if (!this.activity) {
+                var active = Lampa.Activity.active();
+                if (active && active.activity) {
+                    this.activity = active.activity;
+                }
+            }
+
+            if (this.activity) this.activity.loader(true);
 
             html.addClass('layer--wheight');
 
@@ -41,11 +48,10 @@
 
             html.append(scroll.render());
 
-            this.loading(1);
+            comp.loadPage(1);
         };
 
-        this.loading = function (page) {
-            var comp = this;
+        this.loadPage = function (page) {
             if (loading_data) return;
             loading_data = true;
 
@@ -56,23 +62,21 @@
                 current_page = page;
                 comp.build(data.results || []);
                 loading_data = false;
-                activity.activity.loader(false);
+                if (comp.activity) comp.activity.loader(false);
                 comp.start();
             }, function () {
                 loading_data = false;
-                activity.activity.loader(false);
+                if (comp.activity) comp.activity.loader(false);
             });
         };
 
         this.next = function () {
             if (current_page < total_pages && !loading_data) {
-                this.loading(current_page + 1);
+                comp.loadPage(current_page + 1);
             }
         };
 
         this.build = function (results) {
-            var comp = this;
-
             results.forEach(function (element) {
                 element.media_type = element.media_type || 'tv';
 
@@ -111,7 +115,6 @@
         };
 
         this.start = function () {
-            var comp = this;
             Lampa.Controller.add('content', {
                 toggle: function () {
                     Lampa.Controller.collectionSet(scroll.render());
