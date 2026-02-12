@@ -8,12 +8,18 @@
     function addMenuItem() {
         var button = Lampa.Menu.addButton(mad_icon, 'Madhouse', function () {
             Lampa.Activity.push({
-                url: 'discover/tv?with_companies=3464&with_genres=16&sort_by=vote_average.desc&vote_count.gte=10',
+                url: 'discover/tv',
                 title: 'Madhouse Anime',
                 component: 'category_full',
                 source: 'tmdb',
                 page: 1,
-                card_type: true
+                card_type: true,
+                companies: 3464,
+                genres: 16,
+                sort_by: 'vote_average.desc',
+                filter: {
+                    'vote_count.gte': 10
+                }
             });
         });
         button.addClass('madhouse-menu-item');
